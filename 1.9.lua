@@ -1,0 +1,1483 @@
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local PathfindingService = game:GetService("PathfindingService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+local Debris = game:GetService("Debris")
+local CollectionService = game:GetService("CollectionService")
+local LocalPlayer = Players.LocalPlayer
+local Backpack = LocalPlayer:WaitForChild("Backpack")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+local Camera = workspace.CurrentCamera
+
+local SETTINGS = {
+    AutoFarm = {Enabled = false, Method = "Quest", Distance = 100, AutoStats = false, Stats = "Melee", AutoSkills = false, CollectDrops = false, AutoSell = false, AutoBuy = false, FastMode = false, AutoEquipBest = false},
+    FruitSniper = {Enabled = false, AutoCollect = false, AutoStore = false, StorePercentage = 80, FruitBlacklist = {"Bomb-Bomb", "Spike-Spike", "Spin-Spin", "Spring-Spring", "Kilo-Kilo", "Smoke-Smoke", "Rocket-Rocket", "Falcon-Falcon", "Chop-Chop"}, AutoServerHop = false, ServerHopDelay = 3, AutoNotifier = false, AutoEat = false, EatBlacklist = {}, HopOnFruitGone = false},
+    AutoRaid = {Enabled = false, Type = "Flame", AutoNext = false, AutoBuyChip = false, AutoAwaken = false, AutoRaidIfMaxed = false, SoloRaid = false},
+    AutoMastery = {Enabled = false, Weapon = "Current", AutoFarmMasteryIfMaxed = false, AutoSwitchWeapon = false},
+    AutoBoss = {Enabled = false, BossList = {"Diamond", "Jeremy", "Fajita", "Don Swan", "Smoke Admiral", "Greybeard", "rip_indra", "Tide Keeper", "Beautiful Pirate", "Longma", "Cursed Captain", "Captain Elephant", "Stone", "Island Empress", "Warden", "Chief Warden", "Magma Admiral", "Fishman Lord", "Vice Admiral", "Ice Admiral", "Tank", "Spy", "Hydra Leader"}, AutoNext = false, AutoReward = false, AutoHopBoss = false},
+    AutoSeaEvents = {Enabled = false, SeaBeast = false, ShipRaid = false, AutoReward = false, AutoSummon = false, AutoSeaBeastFarm = false},
+    ESP = {Enabled = false, PlayerESP = false, FruitESP = false, EnemyESP = false, ChestESP = false, ESPDistance = 2000, ShowHealth = false, ShowDistance = false, ShowName = false, Tracers = false, BoxESP = false, Chams = false, Box3D = false, Skeleton = false, Line2D = false, Glow = false, HealthBar = false, Weapon = false, ViewLine = false, ItemESP = false, VehicleESP = false, Radar = false, ProjectileESP = false, TeamESP = false, NPCESP = false},
+    Teleports = {FastTeleport = true, TweenSpeed = 250, AutoAvoidWater = true, WaterTP = true, SafeMode = false, AntiVoid = true},
+    Combat = {Godmode = false, InfiniteEnergy = false, NoStun = false, AutoDodge = false, KillAura = false, KillAuraRange = 30, FastAttack = false, FastAttackDuration = 2, FastAttackCooldown = 1, FastAttack200x = false, AutoBounty = false, AutoKenHaki = false, AutoBusoHaki = false, AutoSoru = false, AutoObservationV2 = false, AutoFlashStep = false, NoClip = false, HitboxExpander = false, HitboxSize = 15, AutoBlock = false, PerfectBlock = false, AntiStun = false, AutoCombo = false},
+    Movement = {SpeedHack = 0, JumpPower = 0, Fly = false, FlySpeed = 50, Noclip = false, Invisible = false, NoFallDamage = false, AutoSwim = false, InfinityJump = false, AutoDash = false, WalkOnWater = false, AutoFarmSwim = false},
+    AutoQuest = {Enabled = false, SkipDialog = false, AutoComplete = false, AutoStart = false, AutoNextQuest = false},
+    AutoStats = {Enabled = false, AutoUpgrade = false, UpgradeOrder = {"Melee", "Defense", "Sword", "Gun", "BloxFruit"}, PointsPerUpgrade = 3, AutoDistribute = false},
+    AntiAFK = {Enabled = false, Interval = 600},
+    AutoRejoin = {Enabled = false, Interval = 1800, AutoRejoinOnKick = false},
+    Misc = {AutoHaki = false, AutoRaceV4 = false, MirageFinder = false, ChestFarm = false, FPSBoost = false, WhiteScreen = false, NoFog = false, BlackScreen = false, LockFPS = 0, AutoBuyHaki = false, AutoBuyLegendarySword = false, AutoBuyGodhuman = false, AutoBuyRengoku = false, AutoBuyTrueTriple = false, AutoBuyHallowScythe = false, AutoBuyCursedDual = false, AutoBuySoulGuitar = false, AutoBuyMirrorFractal = false, AutoRace = "None", AutoFarmFragment = false, AutoFarmBones = false, AutoFarmEctoplasm = false},
+    Webhook = {Enabled = false, URL = "", NotifyBoss = false, NotifyFruit = false, NotifyRaid = false, NotifySeaEvent = false, NotifyDeath = false, NotifyLevelUp = false, NotifyBounty = false, AutoExecute = false},
+    Performance = {FixLag = false, LowGraphics = false, NoParticles = false, NoShadows = false, NoTextures = false, RenderDistance = 500, DisableAudio = false, ClearWorkspace = false, OptimizeMemory = false, FPSUnlocker = false, MaxFPS = 240, LowQualityTerrain = false, DisableDecals = false, NoWaterReflection = false, NoLighting = false, DisableBloom = false, DisableDepthOfField = false, DisableMotionBlur = false, DisableColorCorrection = false, DisableSunRays = false, BrownCharacters = false, RemoveAccessories = false, RemoveHats = false, SimpleTerrain = false, AggressiveMemory = false, CompressTextures = false, NoSky = false, NoWeather = false},
+    AutoServerHop = {Enabled = false, MinPlayers = 5, MaxPlayers = 30, HopOnBossSpawn = false, HopOnFruitFound = false, SafeServer = false, HopDelay = 10, AntiLagServer = false}
+}
+
+local State = {
+    IsFarming = false, IsPickingFruit = false, IsRaiding = false, IsBossFarming = false,
+    CurrentTarget = nil, CurrentQuest = nil, CollectedFruits = {}, ESPObjects = {},
+    LastAttack = 0, LastServerHop = 0, LastRejoin = tick(),
+    PerformanceOptimized = false, GUILoaded = false,
+    FastAttackThread = nil, FastAttack200xThread = nil,
+    BlackScreenEnabled = false, BlackScreenGui = nil,
+    LockFPSEnabled = false, OriginalFPS = nil,
+    AutoRaceThread = nil, AutoBuyHakiThread = nil,
+    AutoDoActionThread = nil, BrownCharactersActive = false,
+    MemoryCleanThread = nil
+}
+
+local function notify(title, text, duration)
+    duration = duration or 3
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = duration})
+    end)
+end
+
+local function getNearestEnemy(distance)
+    distance = distance or math.huge
+    local nearest = nil
+    local nearestDist = distance
+    for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy:FindFirstChild("HumanoidRootPart") then
+            local hrp = enemy.HumanoidRootPart
+            if hrp and hrp:IsA("BasePart") then
+                local dist = (RootPart.Position - hrp.Position).Magnitude
+                if dist < nearestDist then
+                    nearestDist = dist
+                    nearest = enemy
+                end
+            end
+        end
+    end
+    return nearest, nearestDist
+end
+
+local function getNearestBoss()
+    local bosses = {"Diamond", "Jeremy", "Fajita", "Don Swan", "Smoke Admiral", "Greybeard", "rip_indra", "Tide Keeper", "Beautiful Pirate", "Longma", "Cursed Captain", "Captain Elephant", "Stone", "Island Empress", "Warden", "Chief Warden", "Magma Admiral", "Fishman Lord", "Vice Admiral", "Ice Admiral", "Tank", "Spy", "Hydra Leader", "Dough King", "Cake Prince", "Leviathan"}
+    local nearest = nil
+    local nearestDist = math.huge
+    for _, bossName in ipairs(bosses) do
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj.Name == bossName or obj.Name:lower():find(bossName:lower()) then
+                local humanoid = obj:FindFirstChild("Humanoid")
+                local hrp = obj:FindFirstChild("HumanoidRootPart")
+                if humanoid and humanoid.Health > 0 and hrp and hrp:IsA("BasePart") then
+                    local dist = (RootPart.Position - hrp.Position).Magnitude
+                    if dist < nearestDist then
+                        nearestDist = dist
+                        nearest = obj
+                    end
+                end
+            end
+        end
+    end
+    return nearest, nearestDist
+end
+
+local function getNearestFruit()
+    local nearest = nil
+    local nearestDist = 500
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") and obj.Enabled then
+            local parent = obj.Parent
+            if parent and parent:IsA("BasePart") and parent:IsDescendantOf(Workspace) then
+                local dist = (RootPart.Position - parent.Position).Magnitude
+                if dist < nearestDist then
+                    nearestDist = dist
+                    nearest = parent
+                end
+            end
+        end
+    end
+    if not nearest then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name:lower():find("fruit") and not obj.Name:lower():find("tree") and obj:IsDescendantOf(Workspace) then
+                local dist = (RootPart.Position - obj.Position).Magnitude
+                if dist < nearestDist then
+                    nearestDist = dist
+                    nearest = obj
+                end
+            end
+        end
+    end
+    return nearest, nearestDist
+end
+
+local function teleportTo(targetPosition, instant)
+    if not targetPosition then return end
+    if not Character or not Character.Parent or not RootPart or not RootPart:IsA("BasePart") then return end
+    if typeof(targetPosition) == "CFrame" then targetPosition = targetPosition.Position end
+    if instant or SETTINGS.Teleports.FastTeleport then
+        pcall(function()
+            RootPart.CFrame = CFrame.new(targetPosition)
+        end)
+    else
+        pcall(function()
+            local tween = TweenService:Create(RootPart, TweenInfo.new((RootPart.Position - targetPosition).Magnitude / SETTINGS.Teleports.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPosition)})
+            tween:Play()
+            tween.Completed:Wait()
+        end)
+    end
+end
+
+local function attackTarget(target)
+    if not target then return end
+    if not target:FindFirstChild("Humanoid") or target.Humanoid.Health <= 0 then return end
+    local hrp = target:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    if (RootPart.Position - hrp.Position).Magnitude > 15 then
+        teleportTo(hrp.Position, true)
+    end
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(true, "M", false, game)
+        task.wait(0.05)
+        VirtualInputManager:SendKeyEvent(false, "M", false, game)
+    end)
+    if SETTINGS.AutoFarm.AutoSkills then
+        for i = 1, 4 do
+            pcall(function()
+                local tool = Backpack:FindFirstChildOfClass("Tool") or Character:FindFirstChildOfClass("Tool")
+                if tool then
+                    Humanoid:EquipTool(tool)
+                    tool:Activate()
+                    task.wait(0.2)
+                end
+            end)
+        end
+    end
+    State.LastAttack = tick()
+end
+
+local function getFruitName(fruitPart)
+    local name = fruitPart.Name
+    local parent = fruitPart.Parent
+    if parent and parent:IsA("Tool") then name = parent.Name end
+    return name
+end
+
+local function isFruitOwned(fruitName)
+    for _, item in ipairs(Backpack:GetChildren()) do
+        if item:IsA("Tool") and (item.Name == fruitName or item.Name:find(fruitName)) then return true end
+    end
+    for _, fruit in ipairs(State.CollectedFruits) do
+        if fruit == fruitName then return true end
+    end
+    return false
+end
+
+local function isFruitBlacklisted(fruitName)
+    for _, blacklisted in ipairs(SETTINGS.FruitSniper.FruitBlacklist) do
+        if fruitName:find(blacklisted) then return true end
+    end
+    return false
+end
+
+local function isFruitEatBlacklisted(fruitName)
+    for _, blacklisted in ipairs(SETTINGS.FruitSniper.EatBlacklist) do
+        if fruitName:find(blacklisted) then return true end
+    end
+    return false
+end
+
+local function eatFruit(fruitPart)
+    if not fruitPart then return false end
+    local prompt = fruitPart:FindFirstChildOfClass("ProximityPrompt")
+    if prompt and prompt.Enabled then
+        fireproximityprompt(prompt)
+        task.wait(0.5)
+        return true
+    end
+    return false
+end
+
+local function serverHop()
+    local timeSinceLastHop = tick() - State.LastServerHop
+    if timeSinceLastHop < SETTINGS.AutoServerHop.HopDelay then return end
+    State.LastServerHop = tick()
+    pcall(function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end)
+    if syn and syn.teleport then syn.teleport(game.PlaceId) end
+    if getgenv().delta_teleport then getgenv().delta_teleport(game.PlaceId) end
+end
+
+local function pickFruit(fruitPart)
+    if not fruitPart then return false end
+    State.IsPickingFruit = true
+    local prompt = fruitPart:FindFirstChildOfClass("ProximityPrompt") or (fruitPart.Parent and fruitPart.Parent:FindFirstChildOfClass("ProximityPrompt"))
+    if prompt and prompt.Enabled then
+        fireproximityprompt(prompt)
+        task.wait(0.5)
+        State.IsPickingFruit = false
+        return true
+    else
+        pcall(function()
+            firetouchinterest(fruitPart, RootPart, 1)
+            task.wait(0.1)
+            firetouchinterest(fruitPart, RootPart, 0)
+        end)
+        task.wait(0.5)
+        State.IsPickingFruit = false
+        return (fruitPart.Parent == nil) or (not fruitPart:IsDescendantOf(Workspace))
+    end
+end
+
+-- SIÊU FIX LAG - LÀM MỊN ĐỒ HỌA + NHÂN VẬT MÀU NÂU
+local function superFixLag()
+    if not SETTINGS.Performance.FixLag then
+        State.PerformanceOptimized = false
+        return
+    end
+    if State.PerformanceOptimized then return end
+    State.PerformanceOptimized = true
+    notify("SUPER FIX LAG", "Đang tối ưu hóa siêu mạnh... Nhân vật sẽ thành màu nâu!", 5)
+    
+    task.spawn(function()
+        pcall(function()
+            settings().Rendering.QualityLevel = 1
+            settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level1
+            settings().Rendering.FrameRateManager = Enum.FrameRateManager.Default
+            setfpscap(240)
+            SoundService.Volume = 0
+            Lighting.GlobalShadows = false
+            Lighting.ShadowSoftness = 0
+            Lighting.Brightness = 2
+            Lighting.ExposureCompensation = 0
+            Lighting.Ambient = Color3.new(1, 1, 1)
+            Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+            Lighting.Bloom.Intensity = 0
+            Lighting.DepthOfField.Enabled = false
+            Lighting.MotionBlur.Enabled = false
+            Lighting.ColorCorrection.Enabled = false
+            Lighting.SunRays.Enabled = false
+            Lighting.FogEnd = 99999
+            Lighting.FogStart = 99999
+            pcall(function() game:GetService("Players").LocalPlayer.PlayerScripts.Scripts.Client["WaterReflection"]:Destroy() end)
+            Workspace.Terrain.WaterWaveSize = 0
+            Workspace.Terrain.WaterWaveSpeed = 0
+            Workspace.Terrain.WaterReflectance = 0
+            Workspace.Terrain.WaterTransparency = 1
+        end)
+        
+        -- Vòng lặp chính để fix lag siêu mạnh
+        task.spawn(function()
+            while SETTINGS.Performance.FixLag do
+                pcall(function()
+                    -- Loại bỏ particles
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+                            obj.Enabled = false
+                        end
+                        if obj:IsA("Decal") or obj:IsA("Texture") then
+                            obj:Destroy()
+                        end
+                    end
+                    
+                    -- Làm trong suốt terrain không cần thiết
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj.Name == "Rock" or obj.Name == "Bush" or obj.Name == "Grass" or obj.Name == "Tree" then
+                            if obj:IsA("BasePart") and obj.Transparency < 1 then
+                                obj.Transparency = 0.95
+                            end
+                        end
+                    end
+                    
+                    -- Biến tất cả nhân vật thành màu nâu
+                    if SETTINGS.Performance.BrownCharacters then
+                        for _, player in ipairs(Players:GetPlayers()) do
+                            if player.Character then
+                                for _, part in ipairs(player.Character:GetChildren()) do
+                                    if part:IsA("BasePart") and part.Transparency < 1 then
+                                        part.Material = Enum.Material.SmoothPlastic
+                                        part.BrickColor = BrickColor.new("Brown")
+                                        part.Color = Color3.fromRGB(139, 69, 19)
+                                        part.Reflectance = 0
+                                        part.TextureID = ""
+                                    end
+                                end
+                                -- Xóa accessories, hats
+                                if SETTINGS.Performance.RemoveAccessories then
+                                    local humanoid = player.Character:FindFirstChild("Humanoid")
+                                    if humanoid then
+                                        for _, acc in ipairs(humanoid:GetAccessories()) do
+                                            pcall(function() acc:Destroy() end)
+                                        end
+                                    end
+                                end
+                                if SETTINGS.Performance.RemoveHats then
+                                    for _, obj in ipairs(player.Character:GetChildren()) do
+                                        if obj:IsA("Accessory") or obj.Name:find("Hat") then
+                                            pcall(function() obj:Destroy() end)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        -- Biến NPC thành màu nâu
+                        for _, enemy in ipairs(Workspace.Enemies:GetChildren()) do
+                            for _, part in ipairs(enemy:GetChildren()) do
+                                if part:IsA("BasePart") and part.Transparency < 1 then
+                                    part.Material = Enum.Material.SmoothPlastic
+                                    part.BrickColor = BrickColor.new("Brown")
+                                    part.Color = Color3.fromRGB(139, 69, 19)
+                                    part.Reflectance = 0
+                                    part.TextureID = ""
+                                end
+                            end
+                        end
+                    end
+                    
+                    -- Remove sky, weather
+                    if SETTINGS.Performance.NoSky then
+                        Lighting.Sky.Parent = nil
+                    end
+                    if SETTINGS.Performance.NoWeather then
+                        for _, obj in ipairs(Workspace:GetDescendants()) do
+                            if obj:IsA("ParticleEmitter") and obj.Name:lower():find("weather") then
+                                obj.Enabled = false
+                            end
+                        end
+                    end
+                    
+                    -- Aggressive memory cleanup
+                    if SETTINGS.Performance.AggressiveMemory then
+                        collectgarbage("collect")
+                        for _, obj in ipairs(Workspace:GetDescendants()) do
+                            if obj:IsA("Model") and #obj:GetChildren() == 0 then
+                                pcall(function() obj:Destroy() end)
+                            end
+                        end
+                    end
+                    
+                    -- Render distance
+                    if SETTINGS.Performance.RenderDistance > 0 then
+                        for _, obj in ipairs(Workspace:GetDescendants()) do
+                            if obj:IsA("BasePart") and obj:IsDescendantOf(Workspace) then
+                                local dist = (RootPart.Position - obj.Position).Magnitude
+                                if dist > SETTINGS.Performance.RenderDistance then
+                                    obj.Transparency = 0.99
+                                end
+                            end
+                        end
+                    end
+                end)
+                task.wait(15)
+            end
+        end)
+    end)
+end
+
+local function manageBlackScreen()
+    if SETTINGS.Misc.BlackScreen then
+        if not State.BlackScreenGui then
+            local gui = Instance.new("ScreenGui")
+            gui.Name = "BlackScreen"
+            gui.Parent = CoreGui
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, 0, 1, 0)
+            frame.BackgroundColor3 = Color3.new(0, 0, 0)
+            frame.Parent = gui
+            State.BlackScreenGui = gui
+        end
+    else
+        if State.BlackScreenGui then
+            State.BlackScreenGui:Destroy()
+            State.BlackScreenGui = nil
+        end
+    end
+end
+
+local function manageLockFPS()
+    if SETTINGS.Misc.LockFPS > 0 then
+        pcall(function()
+            setfpscap(SETTINGS.Misc.LockFPS)
+        end)
+    end
+end
+
+local function manageFastAttack()
+    if SETTINGS.Combat.FastAttack then
+        if not State.FastAttackThread then
+            State.FastAttackThread = task.spawn(function()
+                while SETTINGS.Combat.FastAttack do
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, "M", false, game)
+                        task.wait(SETTINGS.Combat.FastAttackDuration / 100)
+                        VirtualInputManager:SendKeyEvent(false, "M", false, game)
+                    end)
+                    task.wait(SETTINGS.Combat.FastAttackCooldown)
+                end
+                State.FastAttackThread = nil
+            end)
+        end
+    else
+        if State.FastAttackThread then
+            task.cancel(State.FastAttackThread)
+            State.FastAttackThread = nil
+        end
+    end
+end
+
+local function manageFastAttack200x()
+    if SETTINGS.Combat.FastAttack200x then
+        if SETTINGS.Combat.FastAttack then
+            SETTINGS.Combat.FastAttack = false
+            manageFastAttack()
+        end
+        if not State.FastAttack200xThread then
+            State.FastAttack200xThread = task.spawn(function()
+                while SETTINGS.Combat.FastAttack200x do
+                    pcall(function()
+                        VirtualInputManager:SendKeyEvent(true, "M", false, game)
+                        VirtualInputManager:SendKeyEvent(false, "M", false, game)
+                    end)
+                    task.wait(0.005)
+                end
+                State.FastAttack200xThread = nil
+            end)
+        end
+    else
+        if State.FastAttack200xThread then
+            task.cancel(State.FastAttack200xThread)
+            State.FastAttack200xThread = nil
+        end
+    end
+end
+
+local function autoBuyHaki()
+    task.spawn(function()
+        while SETTINGS.Misc.AutoBuyHaki do
+            pcall(function()
+                local args = {[1] = "BuyHaki", [2] = "Enhancement"}
+                ReplicatedStorage.Remotes.Team:FireServer(unpack(args))
+                task.wait(0.5)
+                args = {[1] = "BuyHaki", [2] = "Skyjump"}
+                ReplicatedStorage.Remotes.Team:FireServer(unpack(args))
+                task.wait(0.5)
+                args = {[1] = "BuyHaki", [2] = "FlashStep"}
+                ReplicatedStorage.Remotes.Team:FireServer(unpack(args))
+                task.wait(0.5)
+                args = {[1] = "BuyHaki", [2] = "Observation"}
+                ReplicatedStorage.Remotes.Team:FireServer(unpack(args))
+                task.wait(0.5)
+            end)
+            task.wait(10)
+        end
+    end)
+end
+
+local function autoDoAction()
+    task.spawn(function()
+        while true do
+            local actions = {}
+            if SETTINGS.Misc.AutoBuyGodhuman then table.insert(actions, "Get Godhuman") end
+            if SETTINGS.Misc.AutoBuyRengoku then table.insert(actions, "Get Rengoku") end
+            if SETTINGS.Misc.AutoBuyTrueTriple then table.insert(actions, "Get True Triple Katana") end
+            if SETTINGS.Misc.AutoBuyHallowScythe then table.insert(actions, "Get Hallow Scythe") end
+            if SETTINGS.Misc.AutoBuyCursedDual then table.insert(actions, "Get Cursed Dual Katana") end
+            if SETTINGS.Misc.AutoBuySoulGuitar then table.insert(actions, "Get Soul Guitar") end
+            if SETTINGS.Misc.AutoBuyMirrorFractal then table.insert(actions, "Get Mirror Fractal") end
+            for _, action in ipairs(actions) do
+                pcall(function()
+                    local args = {[1] = action}
+                    ReplicatedStorage.Remotes.Team:FireServer(unpack(args))
+                end)
+                task.wait(2)
+            end
+            task.wait(60)
+        end
+    end)
+end
+
+local function createFuturisticGUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "RyzenAI_BloxFruits"
+    ScreenGui.Parent = CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 620, 0, 460)
+    MainFrame.Position = UDim2.new(0.5, -310, 0.5, -230)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 15)
+    MainFrame.BackgroundTransparency = 0.02
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = true
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 12)
+    UICorner.Parent = MainFrame
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Color3.fromRGB(0, 255, 200)
+    UIStroke.Thickness = 1.5
+    UIStroke.Transparency = 0.3
+    UIStroke.Parent = MainFrame
+
+    local Gradient = Instance.new("UIGradient")
+    Gradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 200)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 0, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 200))}
+    Gradient.Rotation = 45
+    Gradient.Parent = UIStroke
+
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 45)
+    TopBar.BackgroundColor3 = Color3.fromRGB(12, 12, 22)
+    TopBar.BorderSizePixel = 0
+    TopBar.Parent = MainFrame
+    local TopBarCorner = Instance.new("UICorner")
+    TopBarCorner.CornerRadius = UDim.new(0, 12)
+    TopBarCorner.Parent = TopBar
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(0.6, 0, 1, 0)
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.TextColor3 = Color3.fromRGB(0, 255, 200)
+    Title.Text = "⚡ RYZEN AI - BLOX FRUITS v3.0"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 16
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+    CloseBtn.Position = UDim2.new(1, -40, 0, 7)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+    CloseBtn.Text = "✕"
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = 14
+    CloseBtn.Parent = TopBar
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 15)
+    CloseCorner.Parent = CloseBtn
+    CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+    local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+    MinimizeBtn.Position = UDim2.new(1, -75, 0, 7)
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+    MinimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+    MinimizeBtn.Text = "─"
+    MinimizeBtn.Font = Enum.Font.GothamBold
+    MinimizeBtn.TextSize = 14
+    MinimizeBtn.Parent = TopBar
+    local MinCorner = Instance.new("UICorner")
+    MinCorner.CornerRadius = UDim.new(0, 15)
+    MinCorner.Parent = MinimizeBtn
+    local minimized = false
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        MainFrame.Size = minimized and UDim2.new(0, 620, 0, 45) or UDim2.new(0, 620, 0, 460)
+    end)
+
+    local TabContainer = Instance.new("ScrollingFrame")
+    TabContainer.Size = UDim2.new(0, 170, 1, -45)
+    TabContainer.Position = UDim2.new(0, 0, 0, 45)
+    TabContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 22)
+    TabContainer.BorderSizePixel = 0
+    TabContainer.ScrollBarThickness = 2
+    TabContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 200)
+    TabContainer.Parent = MainFrame
+    local TabCorner = Instance.new("UICorner")
+    TabCorner.CornerRadius = UDim.new(0, 12)
+    TabCorner.Parent = TabContainer
+
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Padding = UDim.new(0, 3)
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    UIListLayout.Parent = TabContainer
+
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Size = UDim2.new(1, -175, 1, -45)
+    ContentFrame.Position = UDim2.new(0, 175, 0, 45)
+    ContentFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+    ContentFrame.BorderSizePixel = 0
+    ContentFrame.Parent = MainFrame
+    local ContentCorner = Instance.new("UICorner")
+    ContentCorner.CornerRadius = UDim.new(0, 12)
+    ContentCorner.Parent = ContentFrame
+
+    local TabPages = {}
+    local TabButtons = {}
+    local tabs = {
+        {name = "🏠 Home", order = 1},
+        {name = "⚔️ Farm", order = 2},
+        {name = "🍎 Fruit", order = 3},
+        {name = "👹 Raid", order = 4},
+        {name = "💀 Combat", order = 5},
+        {name = "🏃 Movement", order = 6},
+        {name = "👁️ ESP", order = 7},
+        {name = "⛵ Sea", order = 8},
+        {name = "🎯 Boss", order = 9},
+        {name = "🔧 Misc", order = 10},
+        {name = "🚀 Fix Lag", order = 11},
+        {name = "🌐 Webhook", order = 12},
+        {name = "📜 Actions", order = 13},
+        {name = "⚡ Mastery", order = 14},
+        {name = "🎪 Events", order = 15},
+    }
+
+    for i, tab in ipairs(tabs) do
+        local page = Instance.new("ScrollingFrame")
+        page.Size = UDim2.new(1, -10, 1, -10)
+        page.Position = UDim2.new(0, 5, 0, 5)
+        page.BackgroundTransparency = 1
+        page.ScrollBarThickness = 3
+        page.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 200)
+        page.Visible = (i == 1)
+        page.Parent = ContentFrame
+        local pageLayout = Instance.new("UIListLayout")
+        pageLayout.Padding = UDim.new(0, 4)
+        pageLayout.Parent = page
+        TabPages[tab.name] = page
+
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 32)
+        btn.Position = UDim2.new(0, 5, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(16, 16, 26)
+        btn.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+        btn.Text = tab.name
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 12
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.Parent = TabContainer
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 6)
+        btnCorner.Parent = btn
+        local btnStroke = Instance.new("UIStroke")
+        btnStroke.Color = Color3.fromRGB(0, 255, 200)
+        btnStroke.Thickness = 1
+        btnStroke.Transparency = 0.8
+        btnStroke.Parent = btn
+        TabButtons[tab.name] = btn
+
+        btn.MouseButton1Click:Connect(function()
+            for _, p in pairs(TabPages) do p.Visible = false end
+            page.Visible = true
+            for _, b in pairs(TabButtons) do
+                b.BackgroundColor3 = Color3.fromRGB(16, 16, 26)
+                b.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+                if b:FindFirstChild("UIStroke") then
+                    b.UIStroke.Transparency = 0.8
+                end
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(0, 255, 200, 0.1)
+            btn.TextColor3 = Color3.fromRGB(0, 255, 200)
+            if btn:FindFirstChild("UIStroke") then
+                btn.UIStroke.Transparency = 0
+            end
+        end)
+    end
+
+    local function addToggle(parent, text, configTable, configKey, extraCallback)
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, -10, 0, 30)
+        container.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+        container.BorderSizePixel = 0
+        container.Parent = parent
+        local containerCorner = Instance.new("UICorner")
+        containerCorner.CornerRadius = UDim.new(0, 4)
+        containerCorner.Parent = container
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.62, 0, 1, 0)
+        label.Position = UDim2.new(0, 8, 0, 0)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.new(0.85, 0.85, 0.85)
+        label.Text = text
+        label.Font = Enum.Font.Gotham
+        label.TextSize = 11
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = container
+
+        local toggleFrame = Instance.new("TextButton")
+        toggleFrame.Size = UDim2.new(0, 44, 0, 20)
+        toggleFrame.Position = UDim2.new(1, -54, 0.5, -10)
+        toggleFrame.BackgroundColor3 = configTable[configKey] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(50, 50, 50)
+        toggleFrame.BorderSizePixel = 0
+        toggleFrame.Text = ""
+        toggleFrame.AutoButtonColor = false
+        toggleFrame.Parent = container
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(1, 0)
+        toggleCorner.Parent = toggleFrame
+
+        local toggleKnob = Instance.new("Frame")
+        toggleKnob.Size = UDim2.new(0, 16, 0, 16)
+        toggleKnob.Position = configTable[configKey] and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        toggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+        toggleKnob.BorderSizePixel = 0
+        toggleKnob.Parent = toggleFrame
+        local knobCorner = Instance.new("UICorner")
+        knobCorner.CornerRadius = UDim.new(1, 0)
+        knobCorner.Parent = toggleKnob
+
+        local function updateToggle()
+            if configTable[configKey] then
+                toggleFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+                TweenService:Create(toggleKnob, TweenInfo.new(0.15), {Position = UDim2.new(1, -18, 0.5, -8)}):Play()
+            else
+                toggleFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                TweenService:Create(toggleKnob, TweenInfo.new(0.15), {Position = UDim2.new(0, 2, 0.5, -8)}):Play()
+            end
+        end
+
+        toggleFrame.MouseButton1Click:Connect(function()
+            configTable[configKey] = not configTable[configKey]
+            updateToggle()
+            if extraCallback then extraCallback(configTable[configKey]) end
+        end)
+    end
+
+    local function addButton(parent, text, callback)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 30)
+        btn.BackgroundColor3 = Color3.fromRGB(0, 255, 200, 0.2)
+        btn.TextColor3 = Color3.fromRGB(0, 255, 200)
+        btn.Text = text
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 11
+        btn.Parent = parent
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 4)
+        btnCorner.Parent = btn
+        local btnStroke = Instance.new("UIStroke")
+        btnStroke.Color = Color3.fromRGB(0, 255, 200)
+        btnStroke.Thickness = 1
+        btnStroke.Transparency = 0.5
+        btnStroke.Parent = btn
+        btn.MouseButton1Click:Connect(function()
+            pcall(callback)
+        end)
+        return btn
+    end
+
+    local function addSectionLabel(parent, text)
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, -10, 0, 22)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.fromRGB(0, 255, 200)
+        label.Text = "▸ " .. text
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 13
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = parent
+    end
+
+    -- Populate tabs
+    addSectionLabel(TabPages["🏠 Home"], "Welcome to Ryzen AI v3.0")
+    addSectionLabel(TabPages["🏠 Home"], "SUPER FIX LAG + Nhân vật màu nâu!")
+    addButton(TabPages["🏠 Home"], "🚀 Apply SUPER Fix Lag", superFixLag)
+    addButton(TabPages["🏠 Home"], "🔄 Server Hop", serverHop)
+
+    addSectionLabel(TabPages["⚔️ Farm"], "Auto Farm Settings")
+    addToggle(TabPages["⚔️ Farm"], "Auto Farm", SETTINGS.AutoFarm, "Enabled")
+    addToggle(TabPages["⚔️ Farm"], "Auto Skills", SETTINGS.AutoFarm, "AutoSkills")
+    addToggle(TabPages["⚔️ Farm"], "Collect Drops", SETTINGS.AutoFarm, "CollectDrops")
+    addToggle(TabPages["⚔️ Farm"], "Auto Stats", SETTINGS.AutoFarm, "AutoStats")
+    addToggle(TabPages["⚔️ Farm"], "Fast Mode", SETTINGS.AutoFarm, "FastMode")
+    addToggle(TabPages["⚔️ Farm"], "Auto Equip Best", SETTINGS.AutoFarm, "AutoEquipBest")
+    addSectionLabel(TabPages["⚔️ Farm"], "Auto Quest")
+    addToggle(TabPages["⚔️ Farm"], "Auto Quest", SETTINGS.AutoQuest, "Enabled")
+    addToggle(TabPages["⚔️ Farm"], "Skip Dialog", SETTINGS.AutoQuest, "SkipDialog")
+    addToggle(TabPages["⚔️ Farm"], "Auto Next Quest", SETTINGS.AutoQuest, "AutoNextQuest")
+
+    addSectionLabel(TabPages["🍎 Fruit"], "Fruit Sniper")
+    addToggle(TabPages["🍎 Fruit"], "Fruit Sniper", SETTINGS.FruitSniper, "Enabled")
+    addToggle(TabPages["🍎 Fruit"], "Auto Collect", SETTINGS.FruitSniper, "AutoCollect")
+    addToggle(TabPages["🍎 Fruit"], "Auto Store", SETTINGS.FruitSniper, "AutoStore")
+    addToggle(TabPages["🍎 Fruit"], "Auto Server Hop", SETTINGS.FruitSniper, "AutoServerHop")
+    addToggle(TabPages["🍎 Fruit"], "Auto Notifier", SETTINGS.FruitSniper, "AutoNotifier")
+    addToggle(TabPages["🍎 Fruit"], "Auto Eat Sniper Fruits", SETTINGS.FruitSniper, "AutoEat")
+    addToggle(TabPages["🍎 Fruit"], "Hop on Fruit Gone", SETTINGS.FruitSniper, "HopOnFruitGone")
+
+    addSectionLabel(TabPages["👹 Raid"], "Auto Raid")
+    addToggle(TabPages["👹 Raid"], "Auto Raid", SETTINGS.AutoRaid, "Enabled")
+    addToggle(TabPages["👹 Raid"], "Auto Next", SETTINGS.AutoRaid, "AutoNext")
+    addToggle(TabPages["👹 Raid"], "Auto Buy Chip", SETTINGS.AutoRaid, "AutoBuyChip")
+    addToggle(TabPages["👹 Raid"], "Auto Awaken", SETTINGS.AutoRaid, "AutoAwaken")
+    addToggle(TabPages["👹 Raid"], "Auto Raid if Maxed", SETTINGS.AutoRaid, "AutoRaidIfMaxed")
+    addToggle(TabPages["👹 Raid"], "Solo Raid", SETTINGS.AutoRaid, "SoloRaid")
+
+    addSectionLabel(TabPages["💀 Combat"], "Combat")
+    addToggle(TabPages["💀 Combat"], "Godmode", SETTINGS.Combat, "Godmode")
+    addToggle(TabPages["💀 Combat"], "Infinite Energy", SETTINGS.Combat, "InfiniteEnergy")
+    addToggle(TabPages["💀 Combat"], "No Stun", SETTINGS.Combat, "NoStun")
+    addToggle(TabPages["💀 Combat"], "Kill Aura", SETTINGS.Combat, "KillAura")
+    addToggle(TabPages["💀 Combat"], "Fast Attack", SETTINGS.Combat, "FastAttack", function() manageFastAttack() end)
+    addToggle(TabPages["💀 Combat"], "FAST ATTACK 200x", SETTINGS.Combat, "FastAttack200x", function() manageFastAttack200x() end)
+    addToggle(TabPages["💀 Combat"], "Auto Block", SETTINGS.Combat, "AutoBlock")
+    addToggle(TabPages["💀 Combat"], "Hitbox Expander", SETTINGS.Combat, "HitboxExpander")
+    addToggle(TabPages["💀 Combat"], "Auto Combo", SETTINGS.Combat, "AutoCombo")
+    addSectionLabel(TabPages["💀 Combat"], "Haki")
+    addToggle(TabPages["💀 Combat"], "Auto Ken Haki", SETTINGS.Combat, "AutoKenHaki")
+    addToggle(TabPages["💀 Combat"], "Auto Buso Haki", SETTINGS.Combat, "AutoBusoHaki")
+    addToggle(TabPages["💀 Combat"], "Auto Soru", SETTINGS.Combat, "AutoSoru")
+    addToggle(TabPages["💀 Combat"], "Auto Observation V2", SETTINGS.Combat, "AutoObservationV2")
+
+    addSectionLabel(TabPages["🏃 Movement"], "Movement")
+    addToggle(TabPages["🏃 Movement"], "Fly", SETTINGS.Movement, "Fly")
+    addToggle(TabPages["🏃 Movement"], "Noclip", SETTINGS.Movement, "Noclip")
+    addToggle(TabPages["🏃 Movement"], "Invisible", SETTINGS.Movement, "Invisible")
+    addToggle(TabPages["🏃 Movement"], "No Fall Damage", SETTINGS.Movement, "NoFallDamage")
+    addToggle(TabPages["🏃 Movement"], "Infinity Jump", SETTINGS.Movement, "InfinityJump")
+    addToggle(TabPages["🏃 Movement"], "Walk On Water", SETTINGS.Movement, "WalkOnWater")
+    addToggle(TabPages["🏃 Movement"], "Auto Swim", SETTINGS.Movement, "AutoSwim")
+
+    addSectionLabel(TabPages["👁️ ESP"], "ESP Settings")
+    addToggle(TabPages["👁️ ESP"], "ESP Enabled", SETTINGS.ESP, "Enabled")
+    addToggle(TabPages["👁️ ESP"], "Player ESP", SETTINGS.ESP, "PlayerESP")
+    addToggle(TabPages["👁️ ESP"], "Fruit ESP", SETTINGS.ESP, "FruitESP")
+    addToggle(TabPages["👁️ ESP"], "Enemy ESP", SETTINGS.ESP, "EnemyESP")
+    addToggle(TabPages["👁️ ESP"], "Chest ESP", SETTINGS.ESP, "ChestESP")
+    addToggle(TabPages["👁️ ESP"], "Item/Loot ESP", SETTINGS.ESP, "ItemESP")
+    addToggle(TabPages["👁️ ESP"], "Vehicle ESP", SETTINGS.ESP, "VehicleESP")
+    addToggle(TabPages["👁️ ESP"], "Radar", SETTINGS.ESP, "Radar")
+    addToggle(TabPages["👁️ ESP"], "Projectile ESP", SETTINGS.ESP, "ProjectileESP")
+    addSectionLabel(TabPages["👁️ ESP"], "ESP Details")
+    addToggle(TabPages["👁️ ESP"], "Box 3D", SETTINGS.ESP, "Box3D")
+    addToggle(TabPages["👁️ ESP"], "Skeleton", SETTINGS.ESP, "Skeleton")
+    addToggle(TabPages["👁️ ESP"], "2D Line", SETTINGS.ESP, "Line2D")
+    addToggle(TabPages["👁️ ESP"], "Glow", SETTINGS.ESP, "Glow")
+    addToggle(TabPages["👁️ ESP"], "Chams", SETTINGS.ESP, "Chams")
+    addToggle(TabPages["👁️ ESP"], "Health Bar", SETTINGS.ESP, "HealthBar")
+    addToggle(TabPages["👁️ ESP"], "Distance", SETTINGS.ESP, "ShowDistance")
+    addToggle(TabPages["👁️ ESP"], "Name", SETTINGS.ESP, "ShowName")
+    addToggle(TabPages["👁️ ESP"], "Weapon", SETTINGS.ESP, "Weapon")
+    addToggle(TabPages["👁️ ESP"], "View Line", SETTINGS.ESP, "ViewLine")
+
+    addSectionLabel(TabPages["⛵ Sea"], "Sea Events")
+    addToggle(TabPages["⛵ Sea"], "Auto Sea Events", SETTINGS.AutoSeaEvents, "Enabled")
+    addToggle(TabPages["⛵ Sea"], "Sea Beast", SETTINGS.AutoSeaEvents, "SeaBeast")
+    addToggle(TabPages["⛵ Sea"], "Ship Raid", SETTINGS.AutoSeaEvents, "ShipRaid")
+    addToggle(TabPages["⛵ Sea"], "Auto Reward", SETTINGS.AutoSeaEvents, "AutoReward")
+    addToggle(TabPages["⛵ Sea"], "Auto Summon SeaBeast", SETTINGS.AutoSeaEvents, "AutoSummon")
+
+    addSectionLabel(TabPages["🎯 Boss"], "Auto Boss")
+    addToggle(TabPages["🎯 Boss"], "Auto Boss", SETTINGS.AutoBoss, "Enabled")
+    addToggle(TabPages["🎯 Boss"], "Auto Next", SETTINGS.AutoBoss, "AutoNext")
+    addToggle(TabPages["🎯 Boss"], "Auto Reward", SETTINGS.AutoBoss, "AutoReward")
+    addToggle(TabPages["🎯 Boss"], "Hop if Boss Spawn", SETTINGS.AutoBoss, "AutoHopBoss")
+
+    addSectionLabel(TabPages["🔧 Misc"], "Miscellaneous")
+    addToggle(TabPages["🔧 Misc"], "Anti AFK", SETTINGS.AntiAFK, "Enabled")
+    addToggle(TabPages["🔧 Misc"], "Auto Rejoin", SETTINGS.AutoRejoin, "Enabled")
+    addToggle(TabPages["🔧 Misc"], "FPS Boost", SETTINGS.Misc, "FPSBoost")
+    addToggle(TabPages["🔧 Misc"], "No Fog", SETTINGS.Misc, "NoFog")
+    addToggle(TabPages["🔧 Misc"], "Black Screen", SETTINGS.Misc, "BlackScreen", function() manageBlackScreen() end)
+    addToggle(TabPages["🔧 Misc"], "Lock FPS", SETTINGS.Misc, "LockFPS", function() manageLockFPS() end)
+
+    addSectionLabel(TabPages["🚀 Fix Lag"], "SUPER FIX LAG")
+    addToggle(TabPages["🚀 Fix Lag"], "Fix Lag", SETTINGS.Performance, "FixLag", function() if SETTINGS.Performance.FixLag then superFixLag() end end)
+    addToggle(TabPages["🚀 Fix Lag"], "Brown Characters", SETTINGS.Performance, "BrownCharacters")
+    addToggle(TabPages["🚀 Fix Lag"], "Remove Accessories", SETTINGS.Performance, "RemoveAccessories")
+    addToggle(TabPages["🚀 Fix Lag"], "Remove Hats", SETTINGS.Performance, "RemoveHats")
+    addToggle(TabPages["🚀 Fix Lag"], "Low Graphics", SETTINGS.Performance, "LowGraphics")
+    addToggle(TabPages["🚀 Fix Lag"], "No Particles", SETTINGS.Performance, "NoParticles")
+    addToggle(TabPages["🚀 Fix Lag"], "No Shadows", SETTINGS.Performance, "NoShadows")
+    addToggle(TabPages["🚀 Fix Lag"], "No Textures", SETTINGS.Performance, "NoTextures")
+    addToggle(TabPages["🚀 Fix Lag"], "Disable Audio", SETTINGS.Performance, "DisableAudio")
+    addToggle(TabPages["🚀 Fix Lag"], "Clear Workspace", SETTINGS.Performance, "ClearWorkspace")
+    addToggle(TabPages["🚀 Fix Lag"], "Aggressive Memory", SETTINGS.Performance, "AggressiveMemory")
+    addToggle(TabPages["🚀 Fix Lag"], "FPS Unlocker", SETTINGS.Performance, "FPSUnlocker")
+    addToggle(TabPages["🚀 Fix Lag"], "No Water Reflection", SETTINGS.Performance, "NoWaterReflection")
+    addToggle(TabPages["🚀 Fix Lag"], "No Lighting", SETTINGS.Performance, "NoLighting")
+    addToggle(TabPages["🚀 Fix Lag"], "Disable Bloom", SETTINGS.Performance, "DisableBloom")
+    addToggle(TabPages["🚀 Fix Lag"], "No Sky", SETTINGS.Performance, "NoSky")
+    addToggle(TabPages["🚀 Fix Lag"], "No Weather", SETTINGS.Performance, "NoWeather")
+    addButton(TabPages["🚀 Fix Lag"], "🚀 SUPER FIX LAG NOW", superFixLag)
+
+    addSectionLabel(TabPages["🌐 Webhook"], "Discord Webhook")
+    addToggle(TabPages["🌐 Webhook"], "Enable Webhook", SETTINGS.Webhook, "Enabled")
+    addToggle(TabPages["🌐 Webhook"], "Notify Boss", SETTINGS.Webhook, "NotifyBoss")
+    addToggle(TabPages["🌐 Webhook"], "Notify Fruit", SETTINGS.Webhook, "NotifyFruit")
+    addToggle(TabPages["🌐 Webhook"], "Notify Raid", SETTINGS.Webhook, "NotifyRaid")
+    addToggle(TabPages["🌐 Webhook"], "Notify Death", SETTINGS.Webhook, "NotifyDeath")
+
+    addSectionLabel(TabPages["📜 Actions"], "Auto Do Actions")
+    addToggle(TabPages["📜 Actions"], "Auto Buy Godhuman", SETTINGS.Misc, "AutoBuyGodhuman")
+    addToggle(TabPages["📜 Actions"], "Auto Buy Rengoku", SETTINGS.Misc, "AutoBuyRengoku")
+    addToggle(TabPages["📜 Actions"], "Auto Buy True Triple Katana", SETTINGS.Misc, "AutoBuyTrueTriple")
+    addToggle(TabPages["📜 Actions"], "Auto Buy Hallow Scythe", SETTINGS.Misc, "AutoBuyHallowScythe")
+    addToggle(TabPages["📜 Actions"], "Auto Buy Cursed Dual Katana", SETTINGS.Misc, "AutoBuyCursedDual")
+    addToggle(TabPages["📜 Actions"], "Auto Buy Soul Guitar", SETTINGS.Misc, "AutoBuySoulGuitar")
+    addToggle(TabPages["📜 Actions"], "Auto Buy Mirror Fractal", SETTINGS.Misc, "AutoBuyMirrorFractal")
+    addSectionLabel(TabPages["📜 Actions"], "Auto Buy Haki")
+    addToggle(TabPages["📜 Actions"], "Auto Buy Haki", SETTINGS.Misc, "AutoBuyHaki", function() if SETTINGS.Misc.AutoBuyHaki then autoBuyHaki() end end)
+
+    addSectionLabel(TabPages["⚡ Mastery"], "Auto Mastery")
+    addToggle(TabPages["⚡ Mastery"], "Auto Mastery", SETTINGS.AutoMastery, "Enabled")
+    addToggle(TabPages["⚡ Mastery"], "Auto Farm Mastery if Maxed", SETTINGS.AutoMastery, "AutoFarmMasteryIfMaxed")
+    addToggle(TabPages["⚡ Mastery"], "Auto Switch Weapon", SETTINGS.AutoMastery, "AutoSwitchWeapon")
+
+    addSectionLabel(TabPages["🎪 Events"], "Auto Events")
+    addToggle(TabPages["🎪 Events"], "Auto Race V4", SETTINGS.Misc, "AutoRaceV4")
+    addToggle(TabPages["🎪 Events"], "Mirage Finder", SETTINGS.Misc, "MirageFinder")
+    addToggle(TabPages["🎪 Events"], "Chest Farm", SETTINGS.Misc, "ChestFarm")
+    addToggle(TabPages["🎪 Events"], "Farm Fragment", SETTINGS.Misc, "AutoFarmFragment")
+    addToggle(TabPages["🎪 Events"], "Farm Bones", SETTINGS.Misc, "AutoFarmBones")
+    addToggle(TabPages["🎪 Events"], "Farm Ectoplasm", SETTINGS.Misc, "AutoFarmEctoplasm")
+
+    local firstTab = TabButtons["🏠 Home"]
+    if firstTab then
+        firstTab.BackgroundColor3 = Color3.fromRGB(0, 255, 200, 0.1)
+        firstTab.TextColor3 = Color3.fromRGB(0, 255, 200)
+        if firstTab:FindFirstChild("UIStroke") then
+            firstTab.UIStroke.Transparency = 0
+        end
+    end
+
+    State.GUILoaded = true
+end
+
+local function autoFarm()
+    task.spawn(function()
+        while true do
+            if not SETTINGS.AutoFarm.Enabled then task.wait(2); continue end
+            if not Character or not Character.Parent then
+                Character = LocalPlayer.CharacterAdded:Wait()
+                Humanoid = Character:WaitForChild("Humanoid")
+                RootPart = Character:WaitForChild("HumanoidRootPart")
+            end
+            if Humanoid.Health <= 0 then task.wait(3); continue end
+            local target, _ = getNearestEnemy(SETTINGS.AutoFarm.Distance)
+            if target then
+                State.IsFarming = true
+                State.CurrentTarget = target
+                attackTarget(target)
+            else
+                State.IsFarming = false
+                State.CurrentTarget = nil
+                task.wait(1)
+            end
+            if SETTINGS.AutoFarm.FastMode then task.wait(0.1) else task.wait(0.5) end
+        end
+    end)
+end
+
+local function fruitSniper()
+    task.spawn(function()
+        while true do
+            if not SETTINGS.FruitSniper.Enabled then task.wait(3); continue end
+            if not Character or not Character.Parent then task.wait(1); continue end
+            local fruit, dist = getNearestFruit()
+            if fruit and dist <= 500 then
+                local fruitName = getFruitName(fruit)
+                if isFruitOwned(fruitName) or isFruitBlacklisted(fruitName) then task.wait(1); continue end
+                if SETTINGS.FruitSniper.AutoNotifier then notify("Devil Fruit!", fruitName, 3) end
+                teleportTo(fruit.Position, true)
+                task.wait(0.3)
+                if (RootPart.Position - fruit.Position).Magnitude <= 15 then
+                    if SETTINGS.FruitSniper.AutoEat and not isFruitEatBlacklisted(fruitName) then
+                        local success = eatFruit(fruit)
+                        if success then
+                            table.insert(State.CollectedFruits, fruitName)
+                            notify("Eaten!", fruitName, 2)
+                        end
+                    else
+                        local success = pickFruit(fruit)
+                        if success then
+                            table.insert(State.CollectedFruits, fruitName)
+                            notify("Collected!", fruitName, 2)
+                        end
+                    end
+                    if SETTINGS.FruitSniper.AutoServerHop then task.wait(SETTINGS.FruitSniper.ServerHopDelay); serverHop(); return end
+                end
+            else
+                if SETTINGS.FruitSniper.AutoServerHop and tick() - (State.LastFruitFoundTime or 0) > 15 then
+                    task.wait(2); serverHop(); return
+                end
+            end
+            task.wait(2)
+        end
+    end)
+end
+
+local function autoBoss()
+    task.spawn(function()
+        while true do
+            if not SETTINGS.AutoBoss.Enabled then task.wait(5); continue end
+            local boss, dist = getNearestBoss()
+            if boss and dist <= 200 then
+                State.IsBossFarming = true
+                teleportTo(boss:FindFirstChild("HumanoidRootPart") and boss.HumanoidRootPart.Position)
+                task.wait(0.5)
+                attackTarget(boss)
+            else
+                State.IsBossFarming = false
+            end
+            task.wait(3)
+        end
+    end)
+end
+
+local function combatFeatures()
+    task.spawn(function()
+        while true do
+            if SETTINGS.Combat.Godmode then
+                pcall(function() if Humanoid then Humanoid.Health = Humanoid.MaxHealth end end)
+            end
+            if SETTINGS.Combat.InfiniteEnergy then
+                pcall(function() if Character then local e = Character:FindFirstChild("Energy"); if e then e.Value = e.MaxValue end end end)
+            end
+            if SETTINGS.Combat.NoStun then
+                pcall(function() if Humanoid then Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false); Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false) end end)
+            end
+            if SETTINGS.Combat.KillAura then
+                local nearest, dist = getNearestEnemy(SETTINGS.Combat.KillAuraRange)
+                if nearest and dist <= SETTINGS.Combat.KillAuraRange then attackTarget(nearest) end
+            end
+            if SETTINGS.Combat.AutoKenHaki then
+                pcall(function() VirtualInputManager:SendKeyEvent(true, "E", false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, "E", false, game) end)
+            end
+            if SETTINGS.Combat.AutoBusoHaki then
+                pcall(function() VirtualInputManager:SendKeyEvent(true, "J", false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, "J", false, game) end)
+            end
+            if SETTINGS.Combat.AutoSoru then
+                pcall(function() VirtualInputManager:SendKeyEvent(true, "Q", false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, "Q", false, game) end)
+            end
+            task.wait(0.2)
+        end
+    end)
+end
+
+local function movementFeatures()
+    task.spawn(function()
+        while true do
+            if SETTINGS.Movement.SpeedHack > 0 then Humanoid.WalkSpeed = SETTINGS.Movement.SpeedHack end
+            if SETTINGS.Movement.JumpPower > 0 then Humanoid.JumpPower = SETTINGS.Movement.JumpPower end
+            if SETTINGS.Movement.Fly then
+                pcall(function()
+                    Humanoid.PlatformStand = true
+                    local dir = Vector3.new()
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + Camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - Camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - Camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + Camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+                    RootPart.Velocity = dir * SETTINGS.Movement.FlySpeed
+                end)
+            end
+            if SETTINGS.Movement.Noclip then
+                pcall(function() for _, p in ipairs(Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end)
+            end
+            if SETTINGS.Movement.Invisible then
+                pcall(function() for _, p in ipairs(Character:GetDescendants()) do if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.Transparency = 1 end end end)
+            end
+            if SETTINGS.Movement.NoFallDamage then
+                pcall(function() Humanoid.FallSpeed = 0 end)
+            end
+            if SETTINGS.Movement.InfinityJump then
+                pcall(function() VirtualInputManager:SendKeyEvent(true, "Space", false, game); task.wait(0.05); VirtualInputManager:SendKeyEvent(false, "Space", false, game) end)
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+local function espSystem()
+    local espGui = Instance.new("ScreenGui")
+    espGui.Name = "ESP_GUI"
+    espGui.Parent = CoreGui
+    local radarFrame = Instance.new("Frame")
+    radarFrame.Size = UDim2.new(0, 150, 0, 150)
+    radarFrame.Position = UDim2.new(1, -160, 0, 10)
+    radarFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+    radarFrame.BackgroundTransparency = 0.7
+    radarFrame.BorderSizePixel = 0
+    radarFrame.Visible = false
+    radarFrame.Parent = espGui
+    local radarCorner = Instance.new("UICorner")
+    radarCorner.CornerRadius = UDim.new(1, 0)
+    radarCorner.Parent = radarFrame
+    local radarDots = {}
+
+    local function worldToScreen(pos)
+        local point, onScreen = Camera:WorldToScreenPoint(pos)
+        return Vector2.new(point.X, point.Y), onScreen
+    end
+
+    local function createLine2D(from, to, color, thickness)
+        local line = Drawing.new("Line")
+        line.From = from
+        line.To = to
+        line.Color = color
+        line.Thickness = thickness
+        line.Transparency = 0.5
+        line.Visible = true
+        table.insert(State.ESPObjects, line)
+        return line
+    end
+
+    local function createBox3D(model, color)
+        if not model or not model:FindFirstChild("HumanoidRootPart") then return end
+        local box = Instance.new("SelectionBox")
+        box.Adornee = model
+        box.Color3 = color
+        box.LineThickness = 1.5
+        box.Transparency = 0.5
+        box.Parent = model
+        table.insert(State.ESPObjects, box)
+        return box
+    end
+
+    local function createSkeleton(character, color)
+        local function getJoint(name)
+            return character:FindFirstChild(name)
+        end
+        local joints = {
+            {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+            {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+            {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
+            {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+            {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
+        }
+        for _, pair in ipairs(joints) do
+            local part1 = getJoint(pair[1])
+            local part2 = getJoint(pair[2])
+            if part1 and part2 then
+                local beam = Instance.new("Beam")
+                beam.Attachment0 = part1:FindFirstChild("Attachment") or Instance.new("Attachment", part1)
+                beam.Attachment1 = part2:FindFirstChild("Attachment") or Instance.new("Attachment", part2)
+                beam.Color = ColorSequence.new(color)
+                beam.Width0 = 0.1
+                beam.Width1 = 0.1
+                beam.Parent = character
+                table.insert(State.ESPObjects, beam)
+            end
+        end
+    end
+
+    local function createGlow(character, color)
+        if character:FindFirstChild("ESP_Glow") then return end
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_Glow"
+        highlight.FillColor = color
+        highlight.FillTransparency = 0.8
+        highlight.OutlineColor = color
+        highlight.OutlineTransparency = 0
+        highlight.Parent = character
+        table.insert(State.ESPObjects, highlight)
+    end
+
+    local function createChams(character, color)
+        for _, part in ipairs(character:GetChildren()) do
+            if part:IsA("BasePart") and part.Transparency < 1 then
+                if not part:FindFirstChild("ESP_Chams") then
+                    local cham = Instance.new("Highlight")
+                    cham.Name = "ESP_Chams"
+                    cham.FillColor = color
+                    cham.FillTransparency = 0.5
+                    cham.OutlineTransparency = 1
+                    cham.Parent = part
+                    table.insert(State.ESPObjects, cham)
+                end
+            end
+        end
+    end
+
+    local function createHealthBar(character, maxHealth, currentHealth)
+        if character:FindFirstChild("Head") then
+            local head = character.Head
+            local billboard = Instance.new("BillboardGui")
+            billboard.Adornee = head
+            billboard.Size = UDim2.new(0, 50, 0, 6)
+            billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+            billboard.Parent = head
+            local bg = Instance.new("Frame")
+            bg.Size = UDim2.new(1, 0, 1, 0)
+            bg.BackgroundColor3 = Color3.new(0, 0, 0)
+            bg.BorderSizePixel = 0
+            bg.Parent = billboard
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(currentHealth/maxHealth, 0, 1, 0)
+            frame.BackgroundColor3 = Color3.new(0, 1, 0)
+            frame.BorderSizePixel = 0
+            frame.Parent = billboard
+            table.insert(State.ESPObjects, billboard)
+        end
+    end
+
+    local function updateRadar()
+        radarFrame.Visible = SETTINGS.ESP.Radar and SETTINGS.ESP.Enabled
+        if not radarFrame.Visible then
+            for _, dot in ipairs(radarDots) do dot:Destroy() end
+            radarDots = {}
+            return
+        end
+        for _, dot in ipairs(radarDots) do dot:Destroy() end
+        radarDots = {}
+        local radarSize = 150
+        local scale = 5
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local pos = player.Character.HumanoidRootPart.Position
+                local rel = pos - RootPart.Position
+                local x = rel.X / scale
+                local y = rel.Z / scale
+                local distance = math.sqrt(x*x + y*y)
+                if distance < radarSize/2 then
+                    local dot = Instance.new("Frame")
+                    dot.Size = UDim2.new(0, 4, 0, 4)
+                    dot.Position = UDim2.new(0, radarSize/2 + x - 2, 0, radarSize/2 + y - 2)
+                    dot.BackgroundColor3 = Color3.new(1, 0, 0)
+                    dot.BorderSizePixel = 0
+                    dot.Parent = radarFrame
+                    table.insert(radarDots, dot)
+                end
+            end
+        end
+    end
+
+    task.spawn(function()
+        while true do
+            for _, obj in ipairs(State.ESPObjects) do
+                pcall(function() obj:Destroy() end)
+            end
+            State.ESPObjects = {}
+
+            if not SETTINGS.ESP.Enabled then
+                radarFrame.Visible = false
+                task.wait(1)
+                continue
+            end
+
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player == LocalPlayer then continue end
+                local character = player.Character
+                if not character or not character:FindFirstChild("HumanoidRootPart") then continue end
+                local hrp = character.HumanoidRootPart
+                local humanoid = character:FindFirstChild("Humanoid")
+                local dist = (RootPart.Position - hrp.Position).Magnitude
+                if dist > SETTINGS.ESP.ESPDistance then continue end
+
+                local screenPos, onScreen = worldToScreen(hrp.Position)
+                local color = SETTINGS.ESP.PlayerESP and Color3.new(1, 0, 0) or Color3.new(1, 1, 0)
+
+                if SETTINGS.ESP.PlayerESP or SETTINGS.ESP.EnemyESP then
+                    if SETTINGS.ESP.Box3D then createBox3D(character, color) end
+                    if SETTINGS.ESP.Skeleton then createSkeleton(character, color) end
+                    if SETTINGS.ESP.Line2D and onScreen then
+                        local screenBottom = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                        createLine2D(screenBottom, screenPos, color, 1.5)
+                    end
+                    if SETTINGS.ESP.Glow then createGlow(character, color) end
+                    if SETTINGS.ESP.Chams then createChams(character, color) end
+                    if SETTINGS.ESP.HealthBar and humanoid then
+                        createHealthBar(character, humanoid.MaxHealth, humanoid.Health)
+                    end
+                    if onScreen and (SETTINGS.ESP.ShowName or SETTINGS.ESP.ShowDistance or SETTINGS.ESP.Weapon) then
+                        local text = ""
+                        if SETTINGS.ESP.ShowName then text = text .. player.Name .. " " end
+                        if SETTINGS.ESP.ShowDistance then text = text .. "[" .. math.floor(dist) .. "m] " end
+                        if SETTINGS.ESP.Weapon then
+                            local tool = character:FindFirstChildOfClass("Tool")
+                            if tool then text = text .. "[" .. tool.Name .. "]" end
+                        end
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Adornee = hrp
+                        billboard.Size = UDim2.new(0, 100, 0, 50)
+                        billboard.StudsOffset = Vector3.new(0, 3, 0)
+                        billboard.AlwaysOnTop = true
+                        billboard.Parent = hrp
+                        local label = Instance.new("TextLabel")
+                        label.Size = UDim2.new(1, 0, 1, 0)
+                        label.BackgroundTransparency = 1
+                        label.Text = text
+                        label.TextColor3 = Color3.new(1, 1, 1)
+                        label.TextStrokeTransparency = 0
+                        label.Font = Enum.Font.SourceSansBold
+                        label.TextSize = 12
+                        label.Parent = billboard
+                        table.insert(State.ESPObjects, billboard)
+                    end
+                end
+            end
+
+            -- Fruit ESP
+            if SETTINGS.ESP.FruitESP then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("ProximityPrompt") and obj.Enabled and obj.Parent and obj.Parent:IsA("BasePart") then
+                        local part = obj.Parent
+                        local dist = (RootPart.Position - part.Position).Magnitude
+                        if dist <= SETTINGS.ESP.ESPDistance then
+                            createBox3D(part, Color3.new(1, 0.65, 0))
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Adornee = part
+                            billboard.Size = UDim2.new(0, 80, 0, 20)
+                            billboard.StudsOffset = Vector3.new(0, 2, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Parent = part
+                            local label = Instance.new("TextLabel")
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text = "FRUIT [" .. math.floor(dist) .. "m]"
+                            label.TextColor3 = Color3.new(1, 0.65, 0)
+                            label.Font = Enum.Font.SourceSansBold
+                            label.TextSize = 12
+                            label.Parent = billboard
+                            table.insert(State.ESPObjects, billboard)
+                        end
+                    end
+                end
+            end
+
+            -- Chest ESP
+            if SETTINGS.ESP.ChestESP then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj.Name:lower():find("chest") and obj:IsA("BasePart") then
+                        local dist = (RootPart.Position - obj.Position).Magnitude
+                        if dist <= SETTINGS.ESP.ESPDistance then
+                            createBox3D(obj, Color3.new(0, 1, 0))
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Adornee = obj
+                            billboard.Size = UDim2.new(0, 80, 0, 20)
+                            billboard.StudsOffset = Vector3.new(0, 2, 0)
+                            billboard.AlwaysOnTop = true
+                            billboard.Parent = obj
+                            local label = Instance.new("TextLabel")
+                            label.Size = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text = "CHEST [" .. math.floor(dist) .. "m]"
+                            label.TextColor3 = Color3.new(0, 1, 0)
+                            label.Font = Enum.Font.SourceSansBold
+                            label.TextSize = 12
+                            label.Parent = billboard
+                            table.insert(State.ESPObjects, billboard)
+                        end
+                    end
+                end
+            end
+
+            updateRadar()
+            task.wait(0.3)
+        end
+    end)
+end
+
+local function antiAFK()
+    task.spawn(function()
+        while true do
+            if SETTINGS.AntiAFK.Enabled then
+                pcall(function() VirtualInputManager:SendKeyEvent(true, "RightShift", false, game); task.wait(0.1); VirtualInputManager:SendKeyEvent(false, "RightShift", false, game) end)
+            end
+            task.wait(SETTINGS.AntiAFK.Enabled and SETTINGS.AntiAFK.Interval or 10)
+        end
+    end)
+end
+
+local function autoStats()
+    task.spawn(function()
+        while true do
+            if SETTINGS.AutoStats.Enabled and SETTINGS.AutoStats.AutoUpgrade then
+                pcall(function()
+                    local args = {[1] = "AddPoint", [2] = SETTINGS.AutoFarm.Stats, [3] = SETTINGS.AutoStats.PointsPerUpgrade}
+                    ReplicatedStorage.Remotes.Stat:FireServer(unpack(args))
+                end)
+            end
+            task.wait(2)
+        end
+    end)
+end
+
+local function autoRejoin()
+    task.spawn(function()
+        while true do
+            if SETTINGS.AutoRejoin.Enabled and tick() - State.LastRejoin >= SETTINGS.AutoRejoin.Interval then
+                State.LastRejoin = tick()
+                pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
+            end
+            task.wait(60)
+        end
+    end)
+end
+
+local function miscFeatures()
+    if SETTINGS.Misc.FPSBoost then
+        pcall(function()
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9999
+            settings().Rendering.QualityLevel = 1
+        end)
+    end
+    if SETTINGS.Misc.NoFog then
+        pcall(function()
+            Lighting.FogEnd = 99999
+            Lighting.FogStart = 99999
+        end)
+    end
+    if SETTINGS.Misc.WhiteScreen then
+        pcall(function()
+            local screen = Instance.new("ScreenGui"); screen.Name = "WhiteScreen"; screen.Parent = CoreGui
+            local frame = Instance.new("Frame"); frame.Size = UDim2.new(1,0,1,0); frame.BackgroundColor3 = Color3.new(1,1,1); frame.Parent = screen
+        end)
+    end
+    manageBlackScreen()
+    manageLockFPS()
+    manageFastAttack()
+    manageFastAttack200x()
+    superFixLag()
+    if SETTINGS.Misc.AutoBuyHaki then autoBuyHaki() end
+    autoDoAction()
+end
+
+local function initialize()
+    print("[Ryzen AI v3.0] Blox Fruits Ultimate Script Loading...")
+    notify("Ryzen AI v3.0", "SUPER FIX LAG + Nhân vật màu nâu! All features OFF.", 5)
+    createFuturisticGUI()
+    autoFarm()
+    fruitSniper()
+    autoBoss()
+    combatFeatures()
+    movementFeatures()
+    espSystem()
+    antiAFK()
+    autoStats()
+    autoRejoin()
+    miscFeatures()
+    LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+        Character = newCharacter
+        Humanoid = Character:WaitForChild("Humanoid")
+        RootPart = Character:WaitForChild("HumanoidRootPart")
+        task.wait(1)
+    end)
+    print("[Ryzen AI v3.0] All systems online!")
+end
+
+initialize()
+return true
